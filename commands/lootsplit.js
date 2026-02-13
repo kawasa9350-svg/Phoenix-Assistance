@@ -1,0 +1,492 @@
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('lootsplit')
+        .setDescription('Create a loot split with tax calculations (Admin only)')
+        .addStringOption(option =>
+            option.setName('split_type')
+                .setDescription('The content type for this loot split')
+                .setRequired(true)
+                .setAutocomplete(true))
+        .addStringOption(option =>
+            option.setName('users')
+                .setDescription('Comma-separated list of user IDs or mentions (@user1, @user2)')
+                .setRequired(true))
+        .addIntegerOption(option =>
+            option.setName('total_loot')
+                .setDescription('Total loot amount in silver')
+                .setRequired(true)
+                .setMinValue(0))
+        .addIntegerOption(option =>
+            option.setName('silver_bags')
+                .setDescription('Silver bags value (not taxed, added after tax)')
+                .setRequired(true)
+                .setMinValue(0))
+        .addIntegerOption(option =>
+            option.setName('repair_fees')
+                .setDescription('Repair fees to deduct from total loot')
+                .setRequired(true)
+                .setMinValue(0))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    async autocomplete(interaction) {
+        try {
+            const focusedValue = interaction.options.getFocused();
+            
+            // Get the command to access its database manager
+            const command = interaction.client.commands.get(interaction.commandName);
+            if (!command || !command.dbManager) {
+                console.error('Command or database manager not found for autocomplete');
+                await interaction.respond([]);
+                return;
+            }
+            
+            const db = command.dbManager;
+            
+            // Get available content types (returns empty array if guild not registered)
+            const contentTypes = await db.getContentTypes(interaction.guildId);
+            
+            // If no content types, respond empty immediately
+            if (!contentTypes || contentTypes.length === 0) {
+                await interaction.respond([]);
+                return;
+            }
+            
+            // Filter content types based on user input
+            const filtered = contentTypes
+                .filter(choice => choice.toLowerCase().includes(focusedValue.toLowerCase()))
+                .slice(0, 25); // Discord allows max 25 choices
+
+            // Create autocomplete choices
+            const choices = filtered.map(contentType => ({
+                name: contentType,
+                value: contentType
+            }));
+
+            await interaction.respond(choices);
+        } catch (error) {
+            // Don't try to respond if interaction is unknown/expired (error 10062)
+            // This is expected when interactions expire after 3 seconds
+            if (error.code === 10062) {
+                console.warn('Autocomplete interaction expired or unknown, skipping response');
+                return;
+            }
+            // For other errors, log them as errors
+            console.error('Error in lootsplit autocomplete:', error);
+            // Only try to respond if interaction is still valid
+            try {
+                await interaction.respond([]);
+            } catch (respondError) {
+                // If responding fails, check if it's also an expired interaction
+                if (respondError.code === 10062) {
+                    console.warn('Autocomplete interaction expired during error recovery');
+                } else {
+                    console.error('Failed to respond to autocomplete:', respondError);
+                }
+            }
+        }
+    },
+
+    async execute(interaction, db) {
+        try {
+            // Check if guild is registered
+            if (!(await db.isGuildRegistered(interaction.guildId))) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Guild Not Registered')
+                    .setDescription('This guild must be registered first. Use `/guild-register` to get started.')
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                return interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+
+            // Check if user has permission
+            const member = interaction.member;
+            let hasPermission = false;
+            
+            // Check if user is admin
+            if (member.permissions.has('Administrator')) {
+                hasPermission = true;
+                console.log(`User ${interaction.user.id} has Administrator permission for lootsplit`);
+            } else {
+                // Check if user has lootsplit permission directly
+                try {
+                    const userHasPermission = await db.hasPermission(interaction.guildId, member.id, 'lootsplit');
+                    if (userHasPermission) {
+                        hasPermission = true;
+                        console.log(`User ${interaction.user.id} has direct lootsplit permission`);
+                    }
+                } catch (error) {
+                    console.error('Error checking user permission:', error);
+                }
+                
+                // Check if any of user's roles have lootsplit permission
+                if (!hasPermission) {
+                    for (const role of member.roles.cache.values()) {
+                        try {
+                            const roleHasPermission = await db.hasPermission(interaction.guildId, role.id, 'lootsplit');
+                            if (roleHasPermission) {
+                                hasPermission = true;
+                                console.log(`User ${interaction.user.id} has lootsplit permission through role: ${role.name}`);
+                                break;
+                            }
+                        } catch (error) {
+                            console.error(`Error checking role ${role.id} permission:`, error);
+                        }
+                    }
+                }
+            }
+
+            if (!hasPermission) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Permission Denied')
+                    .setDescription('You do not have permission to use this command.\n\n**Required:** Administrator role or lootsplit permission')
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                return interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+
+            const splitType = interaction.options.getString('split_type');
+            const usersInput = interaction.options.getString('users');
+            const totalLoot = interaction.options.getInteger('total_loot');
+            const silverBags = interaction.options.getInteger('silver_bags');
+            const repairFees = interaction.options.getInteger('repair_fees');
+
+            // Defer the reply to prevent timeout errors for long-running operations
+            await interaction.deferReply({ ephemeral: false });
+
+            // Check if content type exists
+            const contentTypes = await db.getContentTypes(interaction.guildId);
+            if (!contentTypes.includes(splitType)) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FFAA00')
+                    .setTitle('⚠️ Content Type Not Found')
+                    .setDescription(`**${splitType}** is not in your guild's content types.`)
+                    .addFields(
+                        { name: '📋 Available Content Types', value: contentTypes.length > 0 ? contentTypes.join(', ') : 'None', inline: false }
+                    )
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                return interaction.editReply({ embeds: [embed] });
+            }
+
+            // Parse users input
+            const userMentions = usersInput.match(/<@!?(\d+)>/g);
+            const userIds = [];
+            
+            if (userMentions) {
+                userMentions.forEach(mention => {
+                    const userId = mention.replace(/<@!?(\d+)>/, '$1');
+                    userIds.push(userId);
+                });
+            } else {
+                // Try to parse as comma-separated user IDs
+                const ids = usersInput.split(',').map(id => id.trim());
+                userIds.push(...ids);
+            }
+
+            if (userIds.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Invalid Users Input')
+                    .setDescription('Please provide valid user mentions (@user1, @user2) or user IDs.')
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                return interaction.editReply({ embeds: [embed] });
+            }
+
+            // Check for @everyone, server owner, and roles - only allow actual users
+            const invalidIds = [];
+            const validUserIds = [];
+            
+            for (const userId of userIds) {
+                try {
+                    // Check if it's @everyone (guild ID)
+                    if (userId === interaction.guild.id) {
+                        invalidIds.push({ id: userId, reason: '@everyone' });
+                        continue;
+                    }
+                    
+                    // Try to fetch the user to verify it's a real user (not a role)
+                    const user = await interaction.client.users.fetch(userId);
+                    if (!user || user.bot) {
+                        invalidIds.push({ id: userId, reason: 'bot or invalid user' });
+                        continue;
+                    }
+                    
+                    // Check if user is registered
+                    const isRegistered = await db.isUserRegistered(interaction.guildId, userId);
+                    if (isRegistered) {
+                        validUserIds.push(userId);
+                    } else {
+                        invalidIds.push({ id: userId, reason: 'not registered' });
+                    }
+                } catch (error) {
+                    console.error(`Error validating user ${userId}:`, error);
+                    invalidIds.push({ id: userId, reason: 'invalid user ID' });
+                }
+            }
+            
+            if (validUserIds.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ No Valid Users')
+                    .setDescription('None of the provided users are valid registered users.')
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                return interaction.editReply({ embeds: [embed] });
+            }
+            
+            if (invalidIds.length > 0) {
+                const invalidList = invalidIds.map(item => `<@${item.id}> (${item.reason})`).join('\n');
+                
+                // Create confirmation embed with buttons
+                const confirmEmbed = new EmbedBuilder()
+                    .setColor('#FFAA00')
+                    .setTitle('⚠️ Confirm Loot Split')
+                    .setDescription(`Some users were invalid and will be excluded:\n${invalidList}\n\n**Valid users who will receive payment:** ${validUserIds.map(id => `<@${id}>`).join(', ')}\n\n**Total participants:** ${validUserIds.length}\n\nDo you want to proceed with only the valid users?`)
+                    .setFooter({ text: 'Phoenix Assistance Bot' })
+                    .setTimestamp();
+                
+                const confirmRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('confirm_lootsplit')
+                            .setLabel('✅ Proceed with Valid Users')
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId('cancel_lootsplit')
+                            .setLabel('❌ Cancel Loot Split')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+                
+                const response = await interaction.editReply({ 
+                    embeds: [confirmEmbed], 
+                    components: [confirmRow],
+                    // ephemeral: true // Cannot be ephemeral if deferred as public
+                });
+                
+                // Create collector for button interactions
+                const collector = response.createMessageComponentCollector({ time: 60000 }); // 1 minute timeout
+                
+                collector.on('collect', async (i) => {
+                    if (i.user.id !== interaction.user.id) {
+                        await i.reply({ content: '❌ This confirmation is not yours to control!', ephemeral: true });
+                        return;
+                    }
+                    
+                    if (i.customId === 'confirm_lootsplit') {
+                        // User confirmed, proceed with loot split
+                        await i.update({ 
+                            embeds: [new EmbedBuilder()
+                                .setColor('#00AA00')
+                                .setTitle('✅ Proceeding with Loot Split')
+                                .setDescription('Processing loot split with valid users only...')
+                                .setFooter({ text: 'Phoenix Assistance Bot' })
+                                .setTimestamp()],
+                            components: []
+                        });
+                        
+                        // Continue with the loot split logic
+                        await processLootSplit();
+                    } else if (i.customId === 'cancel_lootsplit') {
+                        // User cancelled
+                        await i.update({ 
+                            embeds: [new EmbedBuilder()
+                                .setColor('#FF0000')
+                                .setTitle('❌ Loot Split Cancelled')
+                                .setDescription('Loot split has been cancelled.')
+                                .setFooter({ text: 'Phoenix Assistance Bot' })
+                                .setTimestamp()],
+                            components: []
+                        });
+                    }
+                });
+                
+                collector.on('end', async () => {
+                    // Disable buttons after timeout
+                    try {
+                        await response.edit({ components: [] });
+                    } catch (error) {
+                        console.log('Could not disable confirmation buttons:', error.message);
+                    }
+                });
+                
+                return; // Stop here and wait for user confirmation
+            }
+            
+            // If no invalid users, proceed directly
+            await processLootSplit();
+            
+            // Function to process the loot split
+            async function processLootSplit() {
+                // Send initial processing message if this is the direct path
+                if (invalidIds.length === 0) {
+                    await interaction.editReply({ 
+                        embeds: [new EmbedBuilder()
+                            .setColor('#00AA00')
+                            .setTitle('✅ Processing Loot Split')
+                            .setDescription('Processing loot split with all valid users...')
+                            .setFooter({ text: 'Phoenix Assistance Bot' })
+                            .setTimestamp()],
+                        // ephemeral: false // Already deferred as public
+                    });
+                }
+                try {
+                    // Get tax rate for this content type, use default 20% if none set
+                    let taxRate = await db.getTaxRate(interaction.guildId, splitType);
+                    console.log(`Raw tax rate from DB for ${splitType}:`, taxRate, typeof taxRate);
+                    if (taxRate === null || taxRate === undefined) {
+                        taxRate = 20; // Default 20% tax rate
+                        console.log(`Using default tax rate: ${taxRate}%`);
+                    } else {
+                        console.log(`Using configured tax rate: ${taxRate}%`);
+                    }
+
+                    // Calculate with repair fees logic
+                    // 1. Repair fees taken out of total loot
+                    const netLoot = Math.max(0, totalLoot - repairFees);
+                    
+                    // 2. Subtract tax rate (from the net loot)
+                    const taxAmount = Math.floor(netLoot * taxRate / 100);
+                    
+                    // 3. Split the rest to members, adding silver bags (untaxed)
+                    const remainingLoot = (netLoot - taxAmount) + silverBags;
+                    const payoutPerPlayer = Math.floor(remainingLoot / validUserIds.length);
+
+                    // Create loot split data
+                    const splitData = {
+                        splitType: splitType,
+                        totalLoot: totalLoot,
+                        silverBags: silverBags,
+                        repairFees: repairFees,
+                        netLoot: netLoot,
+                        taxRate: taxRate,
+                        taxAmount: taxAmount,
+                        payoutPerPlayer: payoutPerPlayer,
+                        participants: validUserIds,
+                        createdBy: interaction.user.id
+                    };
+
+                    // Create the loot split in database
+                    const lootSplit = await db.createLootSplit(interaction.guildId, splitData);
+
+                    if (lootSplit) {
+                        // Update user balances and send DMs (if enabled)
+                        for (const userId of validUserIds) {
+                            await db.updateUserBalance(interaction.guildId, userId, payoutPerPlayer, 'add');
+                            
+                            // Check if DMs are enabled in config
+                            const config = require('../config.js');
+                            if (config.features && config.features.enableDMs) {
+                                // Send DM to user about the loot split
+                                try {
+                                    const user = await interaction.client.users.fetch(userId);
+                                    const dmEmbed = new EmbedBuilder()
+                                        .setColor('#00FF00')
+                                        .setTitle('💰 Loot Split Payment Received!')
+                                        .setDescription(`You received **${payoutPerPlayer.toLocaleString()} silver** from the **${splitType}** loot split!`)
+                                        .addFields(
+                                            { name: '💵 Amount Received', value: `${payoutPerPlayer.toLocaleString()} silver`, inline: true },
+                                            { name: '🎯 Content Type', value: splitType, inline: true },
+                                            { name: '👥 Participants', value: validUserIds.length.toString(), inline: true }
+                                        )
+                                        .setFooter({ text: 'Phoenix Assistance Bot' })
+                                        .setTimestamp();
+                                    
+                                    await user.send({ embeds: [dmEmbed] });
+                                } catch (error) {
+                                    console.log(`Could not send DM to user ${userId}:`, error.message);
+                                }
+                            }
+                        }
+
+                        // Create the embed
+                        const embed = new EmbedBuilder()
+                            .setColor('#00FF00')
+                            .setTitle('💰 Loot Split')
+                            .addFields(
+                                { name: 'Total Loot', value: totalLoot.toLocaleString(), inline: true },
+                                { name: 'Repair Fees', value: repairFees.toLocaleString(), inline: true },
+                                { name: 'Silver Bags', value: silverBags.toLocaleString(), inline: true },
+                                { name: 'Net Loot (Taxable)', value: netLoot.toLocaleString(), inline: true }
+                            )
+                            .addFields(
+                                { name: 'Guild Split Fee', value: taxAmount.toLocaleString(), inline: true },
+                                { name: 'Payout Per Player', value: payoutPerPlayer.toLocaleString(), inline: true },
+                                { name: 'User Count', value: validUserIds.length.toString(), inline: true }
+                            )
+                            .addFields(
+                                { name: 'Split Type', value: splitType, inline: true }
+                            )
+                            .addFields({
+                                name: '👤 Users',
+                                value: validUserIds.map(id => `<@${id}>`).join('\n'),
+                                inline: false
+                            })
+                            .setFooter({ text: 'Phoenix Assistance Bot' })
+                            .setTimestamp();
+
+                        // Use appropriate method based on path
+                        if (invalidIds.length === 0) {
+                            await interaction.editReply({ embeds: [embed], ephemeral: false });
+                        } else {
+                            await interaction.followUp({ embeds: [embed], ephemeral: false });
+                        }
+                    } else {
+                        const embed = new EmbedBuilder()
+                            .setColor('#FF0000')
+                            .setTitle('❌ Failed to Create Loot Split')
+                            .setDescription('Failed to create loot split. Please try again.')
+                            .setFooter({ text: 'Phoenix Assistance Bot' })
+                            .setTimestamp();
+                        
+                        // Use appropriate method based on path
+                        if (invalidIds.length === 0) {
+                            await interaction.editReply({ embeds: [embed], ephemeral: false });
+                        } else {
+                            await interaction.followUp({ embeds: [embed], ephemeral: false });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in processLootSplit:', error);
+                    const embed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setTitle('❌ Error')
+                        .setDescription('An error occurred while processing the loot split.')
+                        .setFooter({ text: 'Phoenix Assistance Bot' })
+                        .setTimestamp();
+                    
+                    // Use appropriate method based on path
+                    if (invalidIds.length === 0) {
+                        await interaction.editReply({ embeds: [embed], ephemeral: false });
+                    } else {
+                        await interaction.followUp({ embeds: [embed], ephemeral: false });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in lootsplit command:', error);
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription('An error occurred while creating the loot split.')
+                .setFooter({ text: 'Phoenix Assistance Bot' })
+                .setTimestamp();
+            
+            // Check if interaction is already replied or deferred
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+        }
+    },
+};
