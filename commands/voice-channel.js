@@ -393,22 +393,22 @@ module.exports = {
             // Only delete if this channel is tracked as a temporary channel (created by our bot)
             if (temporaryChannels && temporaryChannels.has(channel.id)) {
                 // This is a temporary channel created by our bot, delete it immediately when empty
-                console.log(`🗑️ Deleting empty temporary voice channel: ${channel.name} (ID: ${channel.id})`);
+                console.log(`🗑️ [Cleanup] Attempting to delete empty channel: ${channel.name} (ID: ${channel.id})`);
                 
                 try {
                     await channel.delete();
                     // Remove from tracking
                     temporaryChannels.delete(channel.id);
-                    console.log(`✅ Successfully deleted empty temporary voice channel: ${channel.name}`);
+                    console.log(`✅ [Cleanup] Successfully deleted channel: ${channel.name}`);
                 } catch (deleteError) {
-                    console.error(`❌ Failed to delete channel ${channel.id}:`, deleteError);
+                    console.error(`❌ [Cleanup] Failed to delete channel ${channel.id}:`, deleteError);
                     // Remove from tracking if deletion failed (channel might already be deleted)
                     temporaryChannels.delete(channel.id);
                 }
             }
 
         } catch (error) {
-            console.error('❌ Error cleaning up empty channel:', error);
+            console.error('❌ [Cleanup] Error in cleanupEmptyChannel:', error);
         }
     },
 
