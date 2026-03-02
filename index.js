@@ -1278,6 +1278,35 @@ function addToLog(type, message) {
     // Also log to original stdout/stderr to avoid recursion
     if (type === 'ERROR') originalError.call(console, message);
     else originalLog.call(console, message);
+
+    // Send log to dashboard
+    const postData = JSON.stringify({
+        botName: 'Phoenix',
+        type: type.toLowerCase(),
+        message: message
+    });
+
+    const options = {
+        hostname: 'localhost',
+        port: 3005,
+        path: '/log',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+
+    const req = http.request(options, (res) => {
+        // Don't care about response
+    });
+
+    req.on('error', (e) => {
+        originalError.call(console, `[Dashboard-Log-Error] Failed to send log to dashboard: ${e.message}`);
+    });
+
+    req.write(postData);
+    req.end();
 }
 
 // Override console methods to capture logs
