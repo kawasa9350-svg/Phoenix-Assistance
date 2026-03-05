@@ -122,7 +122,7 @@ module.exports = {
                 const totalDisplay = type === 'balance' ? `${total.toLocaleString()} silver` : `${total} points`;
                 embed.setFooter({ 
                     text: `🏛️ ${totalField}: ${totalDisplay} | Page ${currentPage + 1} of ${totalPages}`,
-                    iconURL: interaction.guild.iconURL({ forceStatic: true })
+                    iconURL: interaction.guild.iconURL()
                 });
 
                 return embed;
