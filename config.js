@@ -17,7 +17,7 @@ const config = {
   },
   embeds: {
     colors: {
-      success: "#00FF00",
+      success: "#00FF0",
       error: "#FF0000",
       info: "#0099FF",
       warning: "#FFAA00"
@@ -52,3 +52,4 @@ const config = {
 };
 
 module.exports = config;
+
