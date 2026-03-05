@@ -1341,7 +1341,7 @@ const server = http.createServer((req, res) => {
 });
 
 // Start HTTP server on port 8080 (Render will use this)
-const PORT = process.env.PORT || 25596;
+const PORT = process.env.PORT || 25597;
 server.listen(PORT, () => {
     console.log(`🌐 HTTP server running on port ${PORT}`);
     console.log(`   Health check: http://localhost:${PORT}/health`);
