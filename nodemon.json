@@ -1,0 +1,5 @@
+{
+  "watch": ["*.js", "commands/"],
+  "ignore": [".git/**"],
+  "nodeArgs": ["--openssl-legacy-provider"]
+}
