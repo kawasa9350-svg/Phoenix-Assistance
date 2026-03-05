@@ -21,6 +21,10 @@ if not exist node_modules (
     echo.
 )
 
+echo [INFO] Checking Node.js version...
+call node -v
+echo.
+
 echo [INFO] Updating Discord commands...
 call node --openssl-legacy-provider deploy-commands.js
 echo.
