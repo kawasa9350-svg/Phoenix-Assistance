@@ -1,5 +1,4 @@
 @echo off
-set NODE_OPTIONS=--openssl-legacy-provider
 title Albion Assistance Bot
 echo ==========================================
 echo    Albion Assistance Bot - Local Launcher
@@ -23,13 +22,13 @@ if not exist node_modules (
 )
 
 echo [INFO] Updating Discord commands...
-call node deploy-commands.js
+call node --openssl-legacy-provider deploy-commands.js
 echo.
 
 echo [INFO] Starting Bot...
 echo [INFO] Press Ctrl+C to stop.
 echo.
-npx nodemon index.js
+npx nodemon --exec "node --openssl-legacy-provider index.js"
 
 echo.
 echo [INFO] Bot stopped.
