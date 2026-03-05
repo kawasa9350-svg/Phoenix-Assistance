@@ -25,6 +25,7 @@ class DatabaseManager {
                 serverSelectionTimeoutMS: 10000, // Increased timeout for Render
                 socketTimeoutMS: 45000,
                 connectTimeoutMS: 10000, // Added connection timeout
+                tls: true, // Enable TLS/SSL
             });
             
             await this.client.connect();
