@@ -28,7 +28,7 @@ echo.
 echo [INFO] Starting Bot...
 echo [INFO] Press Ctrl+C to stop.
 echo.
-npx nodemon index.js
+npx nodemon --node-args="--openssl-legacy-provider" index.js
 
 echo.
 echo [INFO] Bot stopped.
