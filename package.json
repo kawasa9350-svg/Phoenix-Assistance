@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node --openssl-legacy-provider index.js",
     "dev": "nodemon --exec node --openssl-legacy-provider index.js",
-    "deploy": "node deploy-commands.js",
-    "start:deploy": "node deploy-commands.js && node index.js",
+    "deploy": "node --openssl-legacy-provider deploy-commands.js",
+    "start:deploy": "node --openssl-legacy-provider deploy-commands.js && node --openssl-legacy-provider index.js",
     "start:auto": "node start-with-deploy.js",
     "build": "npm install --production"
   },
