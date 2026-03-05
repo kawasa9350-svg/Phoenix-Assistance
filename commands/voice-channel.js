@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 
 module.exports = {
+    creatingChannels: new Set(),
     data: new SlashCommandBuilder()
         .setName('voice-channel')
         .setDescription('Manage join-to-create voice channels')
@@ -266,6 +267,8 @@ module.exports = {
             // Early return if no setup for this guild
             if (!setup) return;
 
+            if (this.creatingChannels.has(newState.member.id)) return;
+
             // Check if user joined a voice channel
             if (!oldState.channelId && newState.channelId) {
                 if (newState.channelId === setup.channelId) {
@@ -305,6 +308,8 @@ module.exports = {
             const guild = voiceState.guild;
             const user = voiceState.member.user;
             
+            this.creatingChannels.add(user.id);
+
             // Get the join-to-create channel to copy its permissions
             const joinToCreateChannel = guild.channels.cache.get(setup.channelId);
             if (!joinToCreateChannel) {
@@ -359,6 +364,8 @@ module.exports = {
 
         } catch (error) {
             console.error('Error creating temporary voice channel:', error);
+        } finally {
+            this.creatingChannels.delete(voiceState.member.id);
         }
     },
 
