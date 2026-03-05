@@ -1,4 +1,5 @@
 @echo off
+set NODE_OPTIONS=--openssl-legacy-provider
 title Albion Assistance Bot
 echo ==========================================
 echo    Albion Assistance Bot - Local Launcher
