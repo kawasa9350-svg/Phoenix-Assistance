@@ -45,7 +45,7 @@ module.exports = {
     async execute(interaction, db) {
         if (!db) {
             console.error('Database manager not found');
-            await interaction.reply({
+            await interaction.editReply({
                 content: '❌ Database connection error. Please try again later.',
                 ephemeral: true
             });
@@ -66,14 +66,14 @@ module.exports = {
                     await this.handleList(interaction, db);
                     break;
                 default:
-                    await interaction.reply({
+                    await interaction.editReply({
                         content: '❌ Unknown subcommand.',
                         ephemeral: true
                     });
             }
         } catch (error) {
             console.error('Error in voice-channel command:', error);
-            await interaction.reply({
+            await interaction.editReply({
                 content: '❌ An error occurred while processing the command. Please try again.',
                 ephemeral: true
             });
@@ -81,6 +81,7 @@ module.exports = {
     },
 
     async handleSetup(interaction, db) {
+        await interaction.deferReply({ ephemeral: true });
         const category = interaction.options.getChannel('category');
         const channelName = interaction.options.getString('name') || 'Join to Create';
         const userLimit = interaction.options.getInteger('user-limit') || 0;

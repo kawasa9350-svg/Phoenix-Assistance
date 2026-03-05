@@ -10,6 +10,7 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction, db) {
+        await interaction.deferReply({ ephemeral: true });
         try {
             // Check if guild is registered
             if (!(await db.isGuildRegistered(interaction.guildId))) {
@@ -20,7 +21,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                return interaction.editReply({ embeds: [embed], ephemeral: true });
             }
 
             // Check if user has permission
@@ -68,7 +69,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                return interaction.editReply({ embeds: [embed], ephemeral: true });
             }
 
             const contentType = interaction.options.getString('content');
@@ -88,7 +89,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
             } else {
                 const embed = new EmbedBuilder()
                     .setColor('#FF0000')

@@ -6,6 +6,7 @@ module.exports = {
         .setDescription('List all available content types for this guild'),
 
     async execute(interaction, db) {
+        await interaction.deferReply({ ephemeral: true });
         try {
             // Check if guild is registered
             if (!(await db.isGuildRegistered(interaction.guildId))) {
@@ -16,7 +17,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                return interaction.editReply({ embeds: [embed], ephemeral: true });
             }
 
             // Get content types
@@ -33,7 +34,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
             } else {
                 const embed = new EmbedBuilder()
                     .setColor('#0099FF')
