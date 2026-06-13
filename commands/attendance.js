@@ -645,6 +645,9 @@ module.exports = {
     async handleButtonInteraction(interaction, db) {
         try {
             if (interaction.customId === 'confirm_wipe_attendance') {
+                // Defer the interaction to avoid timeout
+                await interaction.deferUpdate();
+
                 // Perform the attendance wipe
                 const result = await db.wipeAllAttendance(interaction.guildId);
 
@@ -660,7 +663,7 @@ module.exports = {
                         .setFooter({ text: 'Phoenix Assistance Bot • Attendance tracking' })
                         .setTimestamp();
                     
-                    await interaction.update({ embeds: [embed], components: [] });
+                    await interaction.editReply({ embeds: [embed], components: [] });
                 } else {
                     const embed = new EmbedBuilder()
                         .setColor('#FF0000')
@@ -669,7 +672,7 @@ module.exports = {
                         .setFooter({ text: 'Phoenix Assistance Bot' })
                         .setTimestamp();
                     
-                    await interaction.update({ embeds: [embed], components: [] });
+                    await interaction.editReply({ embeds: [embed], components: [] });
                 }
             } else if (interaction.customId === 'cancel_wipe_attendance') {
                 const embed = new EmbedBuilder()
@@ -684,13 +687,13 @@ module.exports = {
         } catch (error) {
             console.error('Error in attendance button interaction:', error);
             try {
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.followUp({
                         content: '❌ An error occurred while processing your interaction. Please try again.',
                         ephemeral: true
                     });
                 } else {
-                    await interaction.followUp({
+                    await interaction.reply({
                         content: '❌ An error occurred while processing your interaction. Please try again.',
                         ephemeral: true
                     });
