@@ -623,7 +623,7 @@ module.exports = {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        await interaction.reply({ 
+        await interaction.editReply({ 
             embeds: [confirmEmbed], 
             components: [confirmRow],
             ephemeral: true 
