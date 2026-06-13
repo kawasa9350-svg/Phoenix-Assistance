@@ -287,6 +287,7 @@ module.exports = {
 
         // Extract user IDs from mentions
         const userIds = userMentions.map(mention => mention.replace(/<@!?(\d+)>/, '$1'));
+        console.log('User IDs to add attendance to:', userIds);
         const targetUsers = [];
         const unregisteredUsers = [];
         const results = [];
