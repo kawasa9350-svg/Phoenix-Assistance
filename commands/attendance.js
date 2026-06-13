@@ -320,45 +320,22 @@ module.exports = {
         }
 
         // Add attendance points to all users
-        for (const { user, userRegistration } of targetUsers) {
-            const result = await db.addAttendanceToUser(interaction.guildId, user.id, points);
-            results.push({ user, userRegistration, result });
-        }
+        const result = await db.addAttendanceToUsers(interaction.guildId, userIds, points);
 
-        // Check if all operations were successful
-        const successfulResults = results.filter(r => r.result.success);
-        const failedResults = results.filter(r => !r.result.success);
-
-        if (successfulResults.length === results.length) {
+        if (result.success) {
             // All successful
-            const totalPointsAdded = points * successfulResults.length;
-            const userList = successfulResults.map(r => `${r.user.toString()} (${r.userRegistration.inGameName})`).join('\n');
+            const totalPointsAdded = points * result.userCount;
+            const userList = targetUsers.map(u => `${u.user.toString()} (${u.userRegistration.inGameName})`).join('\n');
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle('✅ Attendance Points Added!')
-                .setDescription(`Added **${points}** attendance point${points > 1 ? 's' : ''} to **${successfulResults.length}** user${successfulResults.length > 1 ? 's' : ''}.`)
+                .setDescription(`Added **${points}** attendance point${points > 1 ? 's' : ''} to **${result.userCount}** user${result.userCount > 1 ? 's' : ''}.`)
                 .addFields(
                     { name: '📈 Total Points Added', value: totalPointsAdded.toString(), inline: true },
-                    { name: '👥 Users Affected', value: successfulResults.length.toString(), inline: true },
+                    { name: '👥 Users Affected', value: result.userCount.toString(), inline: true },
                     { name: '👤 Users', value: userList, inline: false }
                 )
                 .setFooter({ text: 'Phoenix Assistance Bot • Attendance tracking' })
-                .setTimestamp();
-            
-            await interaction.editReply({ embeds: [embed] });
-        } else if (successfulResults.length > 0) {
-            // Partial success
-            const successList = successfulResults.map(r => `${r.user.toString()} (${r.userRegistration.inGameName})`).join('\n');
-            const failList = failedResults.map(r => `${r.user.toString()}`).join('\n');
-            const embed = new EmbedBuilder()
-                .setColor('#FFAA00')
-                .setTitle('⚠️ Partial Success')
-                .setDescription(`Successfully added points to **${successfulResults.length}** user${successfulResults.length > 1 ? 's' : ''}, but failed for **${failedResults.length}** user${failedResults.length > 1 ? 's' : ''}.`)
-                .addFields(
-                    { name: '✅ Successful', value: successList, inline: false },
-                    { name: '❌ Failed', value: failList, inline: false }
-                )
-                .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -367,7 +344,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('❌ Failed to Add Attendance Points')
-                .setDescription('Failed to add attendance points to any users. Please try again.')
+                .setDescription(result.error || 'Failed to add attendance points to any users. Please try again.')
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             

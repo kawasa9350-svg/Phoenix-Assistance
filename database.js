@@ -1592,6 +1592,32 @@ class DatabaseManager {
         }
     }
 
+    async addAttendanceToUsers(guildId, userIds, points) {
+        try {
+            const collection = await this.getGuildCollection(guildId);
+            const guild = await collection.findOne({ guildId: guildId });
+            
+            if (!guild || !guild.users) {
+                return { success: false, error: 'No users found in guild' };
+            }
+
+            const updatePromises = userIds.map(userId => 
+                collection.updateOne(
+                    { guildId: guildId },
+                    { $inc: { [`users.${userId}.attendance`]: points } }
+                )
+            );
+
+            await Promise.all(updatePromises);
+            
+            console.log(`✅ Added ${points} attendance point${points > 1 ? 's' : ''} to ${userIds.length} users in guild ${guildId}`);
+            return { success: true, userCount: userIds.length };
+        } catch (error) {
+            console.error('❌ Failed to add attendance to users:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     async removeAttendanceFromUser(guildId, userId, points) {
         try {
             const collection = await this.getGuildCollection(guildId);
