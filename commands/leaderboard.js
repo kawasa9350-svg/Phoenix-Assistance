@@ -7,6 +7,9 @@ module.exports = {
 
     async execute(interaction, db) {
         try {
+            // Defer reply to avoid timeout
+            await interaction.deferReply();
+
             // Check if guild is registered
             if (!(await db.isGuildRegistered(interaction.guildId))) {
                 const embed = new EmbedBuilder()
@@ -16,16 +19,16 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                return interaction.editReply({ embeds: [embed], ephemeral: true });
             }
 
             // Start with balance leaderboard by default
-            await this.showLeaderboard(interaction, db, 'balance');
+            await this.showLeaderboard(interaction, db, 'balance', true);
         } catch (error) {
             console.error('Error in leaderboard command:', error);
             
             // Only try to reply if we haven't already replied and the interaction is still valid
-            if (!interaction.replied && !interaction.deferred) {
+            if (interaction.deferred) {
                 try {
                     const embed = new EmbedBuilder()
                         .setColor('#FF0000')
@@ -34,7 +37,7 @@ module.exports = {
                         .setFooter({ text: 'Phoenix Assistance Bot' })
                         .setTimestamp();
                     
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                    await interaction.editReply({ embeds: [embed], ephemeral: true });
                 } catch (replyError) {
                     console.error('Error sending error message:', replyError);
                 }
@@ -42,7 +45,7 @@ module.exports = {
         }
     },
 
-    async showLeaderboard(interaction, db, type = 'balance') {
+    async showLeaderboard(interaction, db, type = 'balance', deferred = false) {
         try {
             let data, title, description, totalField, emptyMessage;
             
@@ -68,7 +71,11 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                const replyOptions = { embeds: [embed], ephemeral: true };
+                if (deferred) {
+                    return interaction.editReply(replyOptions);
+                }
+                return interaction.reply(replyOptions);
             }
 
             // Sort users (highest first)
@@ -95,12 +102,17 @@ module.exports = {
                 const endIndex = Math.min(startIndex + usersPerPage, sortedUsers.length);
                 const pageUsers = sortedUsers.slice(startIndex, endIndex);
 
+                const totalDisplay = type === 'balance' ? `${total.toLocaleString()} silver` : `${total} points`;
+
                 const embed = new EmbedBuilder()
                     .setColor('#00FF00')
                     .setTitle(title)
                     .setDescription(`Showing users ${startIndex + 1}-${endIndex} of ${sortedUsers.length}`)
-                    .setFooter({ text: `Page ${page + 1} of ${totalPages} • Phoenix Assistance Bot` })
-                    .setTimestamp();
+                    .setTimestamp()
+                    .setFooter({ 
+                        text: `🏛️ ${totalField}: ${totalDisplay} | Page ${currentPage + 1} of ${totalPages}`,
+                        iconURL: interaction.guild.iconURL()
+                    });
 
                 // Add user entries
                 let leaderboardText = '';
@@ -116,13 +128,6 @@ module.exports = {
                     name: 'Rankings',
                     value: leaderboardText || 'No users found',
                     inline: false
-                });
-
-                // Add total to footer
-                const totalDisplay = type === 'balance' ? `${total.toLocaleString()} silver` : `${total} points`;
-                embed.setFooter({ 
-                    text: `🏛️ ${totalField}: ${totalDisplay} | Page ${currentPage + 1} of ${totalPages}`,
-                    iconURL: interaction.guild.iconURL()
                 });
 
                 return embed;
@@ -183,11 +188,15 @@ module.exports = {
             const initialEmbed = createLeaderboardEmbed(currentPage);
             const initialRows = createNavigationRows();
             
-            const response = await interaction.reply({
+            const replyOptions = {
                 embeds: [initialEmbed],
                 components: initialRows,
                 fetchReply: true
-            });
+            };
+
+            const response = deferred 
+                ? await interaction.editReply(replyOptions)
+                : await interaction.reply(replyOptions);
 
             // Create collector for interactions
             const collector = response.createMessageComponentCollector({ time: 300000 }); // 5 minutes
@@ -227,6 +236,9 @@ module.exports = {
                     }
 
                     if (shouldUpdate) {
+                        // Defer the button update
+                        await i.deferUpdate();
+
                         // Re-fetch data if type changed
                         if (i.customId === 'leaderboard_balance' || i.customId === 'leaderboard_attendance') {
                             // Re-fetch data for the new type
@@ -261,7 +273,7 @@ module.exports = {
                             const updatedEmbed = createLeaderboardEmbed(currentPage);
                             const updatedRows = createNavigationRows();
 
-                            await i.update({
+                            await i.editReply({
                                 embeds: [updatedEmbed],
                                 components: updatedRows
                             });
@@ -271,7 +283,7 @@ module.exports = {
                         const updatedEmbed = createLeaderboardEmbed(currentPage);
                         const updatedRows = createNavigationRows();
 
-                        await i.update({
+                        await i.editReply({
                             embeds: [updatedEmbed],
                             components: updatedRows
                         });

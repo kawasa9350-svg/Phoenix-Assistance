@@ -49,6 +49,9 @@ module.exports = {
 
     async execute(interaction, db) {
         try {
+            // Defer reply to avoid timeout
+            await interaction.deferReply();
+
             // Check if guild is registered
             if (!(await db.isGuildRegistered(interaction.guildId))) {
                 const embed = new EmbedBuilder()
@@ -58,7 +61,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
                 
-                return interaction.reply({ embeds: [embed], ephemeral: true });
+                return interaction.editReply({ embeds: [embed], ephemeral: true });
             }
 
             const subcommand = interaction.options.getSubcommand();
@@ -80,14 +83,14 @@ module.exports = {
                     await this.handleCheckAttendance(interaction, db);
                     break;
                 default:
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'Unknown subcommand!', ephemeral: true });
+                    if (interaction.deferred) {
+                        await interaction.editReply({ content: 'Unknown subcommand!', ephemeral: true });
                     }
             }
         } catch (error) {
             console.error('Error in attendance command:', error);
             
-            if (!interaction.replied && !interaction.deferred) {
+            if (interaction.deferred) {
                 try {
                     const embed = new EmbedBuilder()
                         .setColor('#FF0000')
@@ -96,7 +99,7 @@ module.exports = {
                         .setFooter({ text: 'Phoenix Assistance Bot' })
                         .setTimestamp();
                     
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                    await interaction.editReply({ embeds: [embed], ephemeral: true });
                 } catch (replyError) {
                     console.error('Error sending error message:', replyError);
                 }
@@ -328,20 +331,21 @@ module.exports = {
 
         if (successfulResults.length === results.length) {
             // All successful
+            const totalPointsAdded = points * successfulResults.length;
             const userList = successfulResults.map(r => `${r.user.toString()} (${r.userRegistration.inGameName})`).join('\n');
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle('✅ Attendance Points Added!')
                 .setDescription(`Added **${points}** attendance point${points > 1 ? 's' : ''} to **${successfulResults.length}** user${successfulResults.length > 1 ? 's' : ''}.`)
                 .addFields(
-                    { name: '📈 Points Added', value: points.toString(), inline: true },
+                    { name: '📈 Total Points Added', value: totalPointsAdded.toString(), inline: true },
                     { name: '👥 Users Affected', value: successfulResults.length.toString(), inline: true },
                     { name: '👤 Users', value: userList, inline: false }
                 )
                 .setFooter({ text: 'Phoenix Assistance Bot • Attendance tracking' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else if (successfulResults.length > 0) {
             // Partial success
             const successList = successfulResults.map(r => `${r.user.toString()} (${r.userRegistration.inGameName})`).join('\n');
@@ -357,7 +361,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else {
             // All failed
             const embed = new EmbedBuilder()
@@ -367,7 +371,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed], ephemeral: true });
         }
     },
 
