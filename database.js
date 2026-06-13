@@ -1595,18 +1595,22 @@ class DatabaseManager {
     async addAttendanceToUsers(guildId, userIds, points) {
         try {
             const collection = await this.getGuildCollection(guildId);
+            console.log(`[addAttendanceToUsers] guildId: ${guildId}, userIds: ${JSON.stringify(userIds)}, points: ${points}`);
+
             const guild = await collection.findOne({ guildId: guildId });
             
             if (!guild || !guild.users) {
+                console.log('[addAttendanceToUsers] No users found in guild');
                 return { success: false, error: 'No users found in guild' };
             }
 
-            const updatePromises = userIds.map(userId => 
-                collection.updateOne(
+            const updatePromises = userIds.map(userId => {
+                console.log(`[addAttendanceToUsers] Creating update promise for userId: ${userId}`);
+                return collection.updateOne(
                     { guildId: guildId },
                     { $inc: { [`users.${userId}.attendance`]: points } }
-                )
-            );
+                );
+            });
 
             await Promise.all(updatePromises);
             
