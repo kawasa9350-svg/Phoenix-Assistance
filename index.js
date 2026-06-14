@@ -4,6 +4,9 @@ const path = require('path');
 const http = require('http');
 const dns = require('dns');
 
+// Initialize logger to send console logs to dashboard
+require('./logger.js')('Phoenix Assistance');
+
 // Fix DNS resolution on some hosting providers (prefer IPv4)
 dns.setDefaultResultOrder('ipv4first');
 
