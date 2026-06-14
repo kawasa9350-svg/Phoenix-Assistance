@@ -644,10 +644,10 @@ module.exports = {
 
     async handleButtonInteraction(interaction, db) {
         try {
-            if (interaction.customId === 'confirm_wipe_attendance') {
-                // Defer the interaction to avoid timeout
-                await interaction.deferUpdate();
+            // Defer the interaction to avoid timeout
+            await interaction.deferUpdate();
 
+            if (interaction.customId === 'confirm_wipe_attendance') {
                 // Perform the attendance wipe
                 const result = await db.wipeAllAttendance(interaction.guildId);
 
@@ -682,7 +682,7 @@ module.exports = {
                     .setFooter({ text: 'Phoenix Assistance Bot' })
                     .setTimestamp();
 
-                await interaction.update({ embeds: [embed], components: [] });
+                await interaction.editReply({ embeds: [embed], components: [] });
             }
         } catch (error) {
             console.error('Error in attendance button interaction:', error);
