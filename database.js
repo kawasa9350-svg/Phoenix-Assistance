@@ -542,7 +542,7 @@ class DatabaseManager {
             const guild = await collection.findOne({ guildId: guildId });
             
             console.log(`🔍 Checking permission for guild ${guildId}, role ${roleId}, command ${command}`);
-            console.log('Guild data:', guild);
+            // console.log('Guild data:', guild);
             
             if (!guild || !guild.permissions) {
                 console.log('❌ No guild or permissions found');
