@@ -185,7 +185,7 @@ module.exports = {
         }
 
         // Add attendance to users in voice channel
-        const result = await db.addAttendanceToUsers(interaction.guildId, userIds);
+        const result = await db.addAttendanceToUsers(interaction.guildId, userIds, 1);
 
         if (result.success) {
             // Get user names for display
