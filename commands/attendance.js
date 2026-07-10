@@ -153,7 +153,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Check if the user is in a voice channel
@@ -165,7 +165,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Get all users in the same voice channel
@@ -181,7 +181,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Add attendance to users in voice channel
@@ -207,7 +207,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot • Voice channel attendance tracking' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else {
             const embed = new EmbedBuilder()
                 .setColor('#FF0000')
@@ -216,7 +216,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed], ephemeral: true });
         }
     },
 
@@ -266,7 +266,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         const usersString = interaction.options.getString('users');
@@ -282,7 +282,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Extract user IDs from mentions
@@ -317,7 +317,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Add attendance points to all users
@@ -399,7 +399,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         const usersString = interaction.options.getString('users');
@@ -415,7 +415,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Extract user IDs from mentions
@@ -456,7 +456,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // If any users have insufficient points, show error
@@ -471,7 +471,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Remove attendance points from all users
@@ -499,7 +499,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot • Attendance tracking' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else if (successfulResults.length > 0) {
             // Partial success
             const successList = successfulResults.map(r => `${r.user.toString()} (${r.userRegistration.inGameName})`).join('\n');
@@ -515,7 +515,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else {
             // All failed
             const embed = new EmbedBuilder()
@@ -525,7 +525,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed], ephemeral: true });
         }
     },
 
@@ -575,7 +575,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Create confirmation embed
@@ -621,7 +621,7 @@ module.exports = {
                 .setFooter({ text: 'Phoenix Assistance Bot' })
                 .setTimestamp();
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
 
         // Get user attendance
@@ -639,7 +639,7 @@ module.exports = {
             .setFooter({ text: 'Phoenix Assistance Bot • Attendance tracking' })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
     },
 
     async handleButtonInteraction(interaction, db) {
