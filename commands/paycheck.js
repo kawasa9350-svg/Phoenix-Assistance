@@ -180,7 +180,7 @@ module.exports = {
                                     .setFooter({ text: 'Phoenix Assistance Bot' })
                                     .setTimestamp();
                                 
-                                await user.send({ embeds: [dmEmbed] });
+                                user.send({ embeds: [dmEmbed] });
                             } catch (error) {
                                 console.log(`Could not send DM to user ${userId}:`, error.message);
                             }
