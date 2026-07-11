@@ -250,9 +250,12 @@ class DatabaseManager {
     async setTaxRate(guildId, contentType, taxRate) {
         try {
             const collection = await this.getGuildCollection(guildId);
+            const update = { $set: {} };
+            update.$set[`taxRates.${contentType}`] = taxRate;
+
             await collection.updateOne(
                 { guildId: guildId },
-                { $set: { [`taxRates.${contentType}`]: taxRate } }
+                update
             );
             console.log(`✅ Set tax rate: ${taxRate}% for ${contentType} in guild ${guildId}`);
             return true;
