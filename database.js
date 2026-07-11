@@ -274,9 +274,8 @@ class DatabaseManager {
                 return null; // Not configured
             }
             
-            // Check if the key exists in taxRates
-            if (contentType in guild.taxRates) {
-                return guild.taxRates[contentType]; // Return the configured value (even if 0)
+            if (guild.taxRates && Object.prototype.hasOwnProperty.call(guild.taxRates, contentType)) {
+                return guild.taxRates[contentType];
             }
             
             return null; // Not configured
