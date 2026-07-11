@@ -189,7 +189,8 @@ module.exports = {
 
         if (result.success) {
             // Get user names for display
-            const userNames = result.userIds.map(userId => {
+            // Use the userIds from the voice channel members, as result does not contain userIds
+            const userNames = userIds.map(userId => {
                 const member = voiceChannelMembers.get(userId);
                 return member ? member.displayName : `User ${userId}`;
             });
