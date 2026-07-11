@@ -120,6 +120,26 @@ client.once(Events.ClientReady, async () => {
     }, 60 * 60 * 1000); // Run every hour
     
     console.log('✅ Bot initialization complete');
+    // Register slash commands
+    if (config.bot.token && config.bot.clientId) {
+        const rest = new REST({ version: '10' }).setToken(config.bot.token);
+        try {
+            const commandsJson = client.commands.map(command => command.data.toJSON());
+            console.log(`Started refreshing ${commandsJson.length} application (/) commands.`);
+
+            const data = await rest.put(
+                Routes.applicationCommands(config.bot.clientId),
+                { body: commandsJson },
+            );
+
+            console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+        } catch (error) {
+            console.error('❌ Failed to register application commands:', error);
+        }
+    } else {
+        console.warn('⚠️ BOT_TOKEN or BOT_CLIENT_ID is missing in config.js. Skipping global command registration.');
+    }
+
     console.log(`📊 Loaded ${client.commands.size} commands`);
     console.log(`🔧 MessageDelete event handlers: ${client.listenerCount(Events.MessageDelete)}`);
 });
